@@ -46,7 +46,7 @@ body {
   text-align: center;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
-  max-width: 500px;
+  max-width: 800px;
   width: 100%;
 }
 
@@ -74,7 +74,6 @@ body {
 
 .canvas-container {
   position: relative;
-  max-width: 500px;
   width: 100%;
   background: #0f1129;
   border-radius: 8px;
@@ -101,7 +100,7 @@ body {
 }
 
 .canvas-wrapper {
-  max-width: 500px;
+  max-width: 800px;
   width: 100%;
   background: #0f1129;
   border-radius: 8px;
