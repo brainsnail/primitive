@@ -1,19 +1,39 @@
-import { useCallback } from "react";
+import { useState, useCallback } from "react";
 import "./App.css";
 import { useJob } from "./hooks/useJob";
+import type { JobParams } from "./hooks/useJob";
 import { UploadZone } from "./components/UploadZone";
+import { ControlPanel } from "./components/ControlPanel";
 import { Canvas } from "./components/Canvas";
 import { Toolbar } from "./components/Toolbar";
 
 function App() {
-  const job = useJob();
+  const [file, setFile] = useState<File | null>(null);
+  const [delay, setDelay] = useState(0);
+  const job = useJob(delay);
 
-  const handleFile = useCallback(
-    (file: File) => {
-      job.start(file);
+  const handleFile = useCallback((f: File) => {
+    setFile(f);
+  }, []);
+
+  const handleStart = useCallback(
+    (params: JobParams, playbackDelay: number) => {
+      if (!file) return;
+      setDelay(playbackDelay);
+      job.start(file, params);
+      setFile(null);
     },
-    [job.start]
+    [file, job.start]
   );
+
+  const handleBack = useCallback(() => {
+    setFile(null);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    job.reset();
+    setDelay(0);
+  }, [job.reset]);
 
   const handleDownloadSVG = useCallback(() => {
     if (!job.info) return;
@@ -64,7 +84,14 @@ function App() {
         <h1>PRIMITIVE</h1>
       </header>
       <main className="main">
-        {job.state === "idle" && <UploadZone onFile={handleFile} />}
+        {job.state === "idle" && !file && <UploadZone onFile={handleFile} />}
+        {job.state === "idle" && file && (
+          <ControlPanel
+            file={file}
+            onStart={handleStart}
+            onBack={handleBack}
+          />
+        )}
         {job.state !== "idle" && job.info && (
           <div className="canvas-wrapper">
             <Canvas
@@ -76,7 +103,7 @@ function App() {
             <Toolbar
               state={job.state}
               onStop={job.stop}
-              onReset={job.reset}
+              onReset={handleReset}
               onDownloadSVG={handleDownloadSVG}
               onDownloadPNG={handleDownloadPNG}
             />
