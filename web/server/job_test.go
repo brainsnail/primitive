@@ -69,6 +69,33 @@ func TestJobRun(t *testing.T) {
 	}
 }
 
+func TestNewJobCustomSizes(t *testing.T) {
+	img := testImage(512, 512)
+	job := NewJob(img, JobConfig{
+		Mode:       1,
+		Count:      5,
+		Alpha:      128,
+		InputSize:  128,
+		OutputSize: 512,
+	})
+	if job.Info.Width != 512 || job.Info.Height != 512 {
+		t.Fatalf("expected 512x512 output, got %dx%d", job.Info.Width, job.Info.Height)
+	}
+}
+
+func TestNewJobDefaultSizes(t *testing.T) {
+	img := testImage(512, 512)
+	job := NewJob(img, JobConfig{
+		Mode:  1,
+		Count: 5,
+		Alpha: 128,
+	})
+	// Default outputSize=1024, so scaled output should be 1024x1024 for square input
+	if job.Info.Width != 1024 || job.Info.Height != 1024 {
+		t.Fatalf("expected 1024x1024 default output, got %dx%d", job.Info.Width, job.Info.Height)
+	}
+}
+
 func TestJobStop(t *testing.T) {
 	img := testImage(64, 64)
 	job := NewJob(img, JobConfig{

@@ -31,9 +31,11 @@ type ShapeResult struct {
 
 // JobConfig holds the parameters for a primitive job.
 type JobConfig struct {
-	Mode  int `json:"mode"`
-	Count int `json:"count"`
-	Alpha int `json:"alpha"`
+	Mode       int `json:"mode"`
+	Count      int `json:"count"`
+	Alpha      int `json:"alpha"`
+	InputSize  int `json:"inputSize"`
+	OutputSize int `json:"outputSize"`
 }
 
 // JobInfo holds the initial dimensions and background, sent when the WebSocket connects.
@@ -63,13 +65,22 @@ func generateID() string {
 }
 
 // NewJob creates a job from an uploaded image and config.
-// The input image is resized to 256px max dimension for processing.
-// The model output is scaled to 1024px.
+// InputSize controls the processing resolution (default 256).
+// OutputSize controls the rendered SVG resolution (default 1024).
 func NewJob(img image.Image, config JobConfig) *Job {
-	input := resize.Thumbnail(256, 256, img, resize.Bilinear)
+	inputSize := config.InputSize
+	if inputSize == 0 {
+		inputSize = 256
+	}
+	outputSize := config.OutputSize
+	if outputSize == 0 {
+		outputSize = 1024
+	}
+
+	input := resize.Thumbnail(uint(inputSize), uint(inputSize), img, resize.Bilinear)
 
 	bg := primitive.MakeColor(primitive.AverageImageColor(input))
-	model := primitive.NewModel(input, bg, 1024, runtime.NumCPU())
+	model := primitive.NewModel(input, bg, outputSize, runtime.NumCPU())
 
 	bgHex := fmt.Sprintf("#%02x%02x%02x", bg.R, bg.G, bg.B)
 
