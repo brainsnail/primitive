@@ -67,23 +67,57 @@ func (s *Server) handleCreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mode, _ := strconv.Atoi(r.FormValue("mode"))
-	if mode == 0 {
-		mode = 1
+	// Parse config with defaults — check string emptiness so that
+	// valid zero values (mode=0 for Combo, alpha=0 for Auto) are not overridden.
+	mode := 1
+	if s := r.FormValue("mode"); s != "" {
+		mode, _ = strconv.Atoi(s)
 	}
-	count, _ := strconv.Atoi(r.FormValue("count"))
-	if count == 0 {
-		count = 100
+
+	count := 100
+	if s := r.FormValue("count"); s != "" {
+		count, _ = strconv.Atoi(s)
+		if count < 1 {
+			count = 1
+		}
+		if count > 1000 {
+			count = 1000
+		}
 	}
-	alpha, _ := strconv.Atoi(r.FormValue("alpha"))
-	if alpha == 0 {
-		alpha = 128
+
+	alpha := 128
+	if s := r.FormValue("alpha"); s != "" {
+		alpha, _ = strconv.Atoi(s)
+	}
+
+	inputSize := 256
+	if s := r.FormValue("inputSize"); s != "" {
+		inputSize, _ = strconv.Atoi(s)
+		if inputSize < 64 {
+			inputSize = 64
+		}
+		if inputSize > 1024 {
+			inputSize = 1024
+		}
+	}
+
+	outputSize := 1024
+	if s := r.FormValue("outputSize"); s != "" {
+		outputSize, _ = strconv.Atoi(s)
+		if outputSize < 256 {
+			outputSize = 256
+		}
+		if outputSize > 4096 {
+			outputSize = 4096
+		}
 	}
 
 	job := NewJob(img, JobConfig{
-		Mode:  mode,
-		Count: count,
-		Alpha: alpha,
+		Mode:       mode,
+		Count:      count,
+		Alpha:      alpha,
+		InputSize:  inputSize,
+		OutputSize: outputSize,
 	})
 
 	s.jobsMu.Lock()

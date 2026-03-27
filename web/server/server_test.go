@@ -136,6 +136,103 @@ func TestWebSocketStreaming(t *testing.T) {
 	}
 }
 
+func TestCreateJobWithSizes(t *testing.T) {
+	srv := NewServer()
+	imgBytes := encodePNG(testImage(64, 64))
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("image", "test.png")
+	part.Write(imgBytes)
+	writer.WriteField("inputSize", "128")
+	writer.WriteField("outputSize", "512")
+	writer.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/jobs", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	if w.Result().StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(w.Result().Body)
+		t.Fatalf("expected 200, got %d: %s", w.Result().StatusCode, body)
+	}
+
+	var result struct{ ID string `json:"id"` }
+	json.NewDecoder(w.Result().Body).Decode(&result)
+
+	srv.jobsMu.RLock()
+	job := srv.jobs[result.ID]
+	srv.jobsMu.RUnlock()
+
+	if job.Config.InputSize != 128 {
+		t.Fatalf("expected inputSize 128, got %d", job.Config.InputSize)
+	}
+	if job.Config.OutputSize != 512 {
+		t.Fatalf("expected outputSize 512, got %d", job.Config.OutputSize)
+	}
+}
+
+func TestCreateJobMode0(t *testing.T) {
+	srv := NewServer()
+	imgBytes := encodePNG(testImage(64, 64))
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("image", "test.png")
+	part.Write(imgBytes)
+	writer.WriteField("mode", "0")
+	writer.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/jobs", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	var result struct{ ID string `json:"id"` }
+	json.NewDecoder(w.Result().Body).Decode(&result)
+
+	srv.jobsMu.RLock()
+	job := srv.jobs[result.ID]
+	srv.jobsMu.RUnlock()
+
+	if job.Config.Mode != 0 {
+		t.Fatalf("expected mode 0 (Combo), got %d", job.Config.Mode)
+	}
+}
+
+func TestCreateJobSizeClamping(t *testing.T) {
+	srv := NewServer()
+	imgBytes := encodePNG(testImage(64, 64))
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, _ := writer.CreateFormFile("image", "test.png")
+	part.Write(imgBytes)
+	writer.WriteField("inputSize", "9999")
+	writer.WriteField("outputSize", "10")
+	writer.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/jobs", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	var result struct{ ID string `json:"id"` }
+	json.NewDecoder(w.Result().Body).Decode(&result)
+
+	srv.jobsMu.RLock()
+	job := srv.jobs[result.ID]
+	srv.jobsMu.RUnlock()
+
+	if job.Config.InputSize != 1024 {
+		t.Fatalf("expected inputSize clamped to 1024, got %d", job.Config.InputSize)
+	}
+	if job.Config.OutputSize != 256 {
+		t.Fatalf("expected outputSize clamped to 256, got %d", job.Config.OutputSize)
+	}
+}
+
 func TestWebSocketStop(t *testing.T) {
 	srv := NewServer()
 
